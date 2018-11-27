@@ -1,0 +1,57 @@
+
+on init
+#omr
+    mkdir /omr 0771 system system
+
+#carrier
+	export PHONEBOOK_EXCHANGE_PKG_DOCOMO "com.samsung.android.exchange"
+    setprop ro.phonemotion.parameter.path /system/etc/parameter.txt
+
+on fs
+#omr
+    wait /dev/block/platform/13500000.dwmmc0/by-name/OMR
+    mount ext4 /dev/block/platform/13500000.dwmmc0/by-name/OMR /omr nosuid nodev noatime noauto_da_alloc,discard,journal_checksum,data=ordered,errors=panic
+    chown system system /omr
+    chmod 0771 /omr
+
+on post-fs-data	
+# JPN: For MobileTV [ISDBT/SBTVD]
+    mkdir /data/one-seg 0775 system system
+    chown system system /data/one-seg
+    chmod 0775 /data/one-seg
+
+# Fullseg data foldor of FSI
+    mkdir /data/dtv 0770 system system
+    restorecon_recursive /data/dtv
+
+# Fullseg of FSI
+    mkdir /data/misc/multimedia 0770 system system
+    mkdir /data/misc/multimedia/BML 0770 system system
+
+# FeliCaLock
+    mkdir /efs/sec_efs/FeliCaLock 0775 system oem_5504
+    chown system oem_5504 /efs/sec_efs/FeliCaLock
+	
+# For JPN dhome kisekae
+    mkdir /data/kisekae 0755 system system
+
+# GNSS SUPL IOT for JPN DCM
+    setprop dcm_supl_iot true
+
+on boot
+# LTN: For MobileTV [SBTVD]
+service broadcastProcessObserver_ltn /system/bin/broadcastProcessObserver_ltn
+    class main
+    user system
+    group system audio sdcard_rw shell media media_rw
+
+# JPN: For FullSegDTV of FSI [ISDBT] should be in on boot
+service dtvserver /system/bin/dtvserver
+    class main
+    user system
+    group system audio sdcard_rw shell media media_rw
+
+on post-fs
+# Permissions for ISDBT/SBTVD tuner
+    chown system system /dev/isdbt
+    chmod 0660 /dev/isdbt
