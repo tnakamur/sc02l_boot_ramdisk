@@ -1,9 +1,11 @@
-import init.samsungexynos7885.usb.rc
+import init.${ro.hardware}.usb.rc
 import init.baseband.rc
 import init.carrier.rc
+import init.gps.rc
 
 on early-init
     mkdir /efs 0771 radio system
+    mkdir /cpefs 0771 radio system
     mount debugfs /sys/kernel/debug /sys/kernel/debug
 
 on init
@@ -35,9 +37,9 @@ on init
     write /proc/sys/net/core/rmem_default 327680
     write /proc/sys/net/core/rmem_max 327680
 
-    # For Selective boost
-    write /dev/cpuset/top-app/selective_boost 1
-    write /dev/cpuset/foreground/selective_boost 1
+	
+    ## SCSC BT
+    chown bluetooth bluetooth /sys/module/scsc_bt/parameters/bluetooth_address
 
 on post-fs-data
 # Log data folder
@@ -57,22 +59,18 @@ on post-fs-data
     chown system system /data/cache/backup_stage
     chmod 0711 /data/cache/backup_stage
 
-# Permissions for gnss
-    chmod 0660 /dev/gnss_ipc
-    chown system system /dev/gnss_ipc
-    mkdir /data/system 0771 system system
-    chown system system /data/system
-    mkdir /data/system/gps 0771 system system
-    chown system system /data/system/gps
-    rm /data/system/gps/gps_started
-    rm /data/system/gps/glonass_started
-    rm /data/system/gps/beidou_started
-    rm /data/system/gps/smd_started
-    rm /data/system/gps/sv_cno.info
-
     setprop vold.post_fs_data_done 1
 
+# for WIFI MAC address
+    mkdir /efs/wifi 0775 wifi root
+    chown wifi root /efs/wifi/.mac.info
+    chmod 0664 /efs/wifi/.mac.info
+    chown wifi root /efs/wifi/.mac.cob
+    chmod 0664 /efs/wifi/.mac.cob
+
 ## SCSC WLAN
+    write /sys/module/scsc_mx/parameters/disable_recovery_handling 0
+
     # Setup Wi-Fi permissions
     mkdir /data/misc/wifi 0770 wifi system
     mkdir /data/misc/wifi/sockets 0770 wifi wifi
@@ -107,7 +105,7 @@ on post-fs-data
     chmod 0660 /dev/radio0
 
 # Permissions Camera
-    mkdir /data/camera 0770 cameraserver system
+    mkdir /data/vendor/camera 0770 cameraserver system
     mkdir /data/misc/camera 0770 cameraserver cameraserver
     chown system radio /sys/class/camera/rear/rear_camfw
     chown system radio /sys/class/camera/rear/rear_camfw_full
@@ -161,6 +159,13 @@ service remosaic_daemon /vendor/bin/remosaic_daemon
     chmod 0755 /sys/kernel/debug/tracing
     restorecon /sys/kernel/debug/tracing/trace_marker
 
+# Samsung Pay
+    mkdir /efs/pfw_data 0760 spay spay    
+
+# MST/NFC Switch
+    chown spay system /dev/mst_ctrl
+    chmod 0660 /dev/mst_ctrl
+
 on boot
 
 # SSWAP
@@ -190,6 +195,10 @@ on boot
     chmod 0640 /efs/bluetooth/bt_addr
 
     setprop ro.radio.noril no
+
+    # Set permissions for ttysac2
+    chown system system /dev/ttySAC2
+    chmod 0660 /dev/ttySAC2
 
     # SEC_PM sysfs
     # RTC status
@@ -222,7 +231,11 @@ on boot
     chmod 0664 /sys/power/cpuhotplug/enabled
     chmod 0664 /sys/power/cpuhotplug/min_online_cpu
     chmod 0664 /sys/power/cpuhotplug/max_online_cpu
-    
+
+    # Cstate node
+    chown radio system /sys/module/cpuidle/parameters/off
+    chmod 0664 /sys/module/cpuidle/parameters/off
+
     # Permissions for input_booster
     chown system radio /sys/class/input_booster/level
     chown system radio /sys/class/input_booster/head
@@ -230,14 +243,21 @@ on boot
     chmod 0664 /sys/class/input_booster/level
     chmod 0664 /sys/class/input_booster/head
     chmod 0664 /sys/class/input_booster/tail
-    
+
+    # Permissions for family_boost
+    chown system radio /sys/kernel/hmp/family_boost
+    chmod 0664 /sys/kernel/hmp/family_boost
+
+    chown system radio /sys/kernel/hmp/down_threshold
+    chmod 0664 /sys/kernel/hmp/down_threshold
+
     chown system radio /sys/devices/system/sec_os_ctrl/migrate_os
     chmod 0664 /sys/devices/system/sec_os_ctrl/migrate_os
 
     # mif dvfs node
-    chown radio sys/devices/platform/17000010.devfreq_mif/devfreq/17000010.devfreq_mif/available_frequencies
+    chown system system sys/devices/platform/17000010.devfreq_mif/devfreq/17000010.devfreq_mif/available_frequencies
     chmod 0664 sys/devices/platform/17000010.devfreq_mif/devfreq/17000010.devfreq_mif/available_frequencies
-    chown radio sys/devices/platform/17000010.devfreq_mif/devfreq/17000010.devfreq_mif/min_freq
+    chown system system sys/devices/platform/17000010.devfreq_mif/devfreq/17000010.devfreq_mif/min_freq
     chmod 0664 sys/devices/platform/17000010.devfreq_mif/devfreq/17000010.devfreq_mif/min_freq
 
     # GPU dvfs node
@@ -273,29 +293,58 @@ on boot
     chown system system /sys/devices/system/cpu/cpu0/cpufreq/interactive/io_is_busy
     chmod 0660 /sys/devices/system/cpu/cpu0/cpufreq/interactive/io_is_busy
 
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/interactive/timer_rate
-    chmod 0660 /sys/devices/system/cpu/cpu4/cpufreq/interactive/timer_rate
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/interactive/timer_slack
-    chmod 0660 /sys/devices/system/cpu/cpu4/cpufreq/interactive/timer_slack
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/interactive/min_sample_time
-    chmod 0660 /sys/devices/system/cpu/cpu4/cpufreq/interactive/min_sample_time
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/interactive/hispeed_freq
-    chmod 0660 /sys/devices/system/cpu/cpu4/cpufreq/interactive/hispeed_freq
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/interactive/target_loads
-    chmod 0660 /sys/devices/system/cpu/cpu4/cpufreq/interactive/target_loads
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/interactive/go_hispeed_load
-    chmod 0660 /sys/devices/system/cpu/cpu4/cpufreq/interactive/go_hispeed_load
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/interactive/above_hispeed_delay
-    chmod 0660 /sys/devices/system/cpu/cpu4/cpufreq/interactive/above_hispeed_delay
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/interactive/boost
-    chmod 0660 /sys/devices/system/cpu/cpu4/cpufreq/interactive/boost
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/interactive/boostpulse
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/interactive/input_boost
-    chmod 0660 /sys/devices/system/cpu/cpu4/cpufreq/interactive/input_boost
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/interactive/boostpulse_duration
-    chmod 0660 /sys/devices/system/cpu/cpu4/cpufreq/interactive/boostpulse_duration
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/interactive/io_is_busy
-    chmod 0660 /sys/devices/system/cpu/cpu4/cpufreq/interactive/io_is_busy
+    chown system system /sys/devices/system/cpu/cpu6/cpufreq/interactive/timer_rate
+    chmod 0660 /sys/devices/system/cpu/cpu6/cpufreq/interactive/timer_rate
+    chown system system /sys/devices/system/cpu/cpu6/cpufreq/interactive/timer_slack
+    chmod 0660 /sys/devices/system/cpu/cpu6/cpufreq/interactive/timer_slack
+    chown system system /sys/devices/system/cpu/cpu6/cpufreq/interactive/min_sample_time
+    chmod 0660 /sys/devices/system/cpu/cpu6/cpufreq/interactive/min_sample_time
+    chown system system /sys/devices/system/cpu/cpu6/cpufreq/interactive/hispeed_freq
+    chmod 0660 /sys/devices/system/cpu/cpu6/cpufreq/interactive/hispeed_freq
+    chown system system /sys/devices/system/cpu/cpu6/cpufreq/interactive/target_loads
+    chmod 0660 /sys/devices/system/cpu/cpu6/cpufreq/interactive/target_loads
+    chown system system /sys/devices/system/cpu/cpu6/cpufreq/interactive/go_hispeed_load
+    chmod 0660 /sys/devices/system/cpu/cpu6/cpufreq/interactive/go_hispeed_load
+    chown system system /sys/devices/system/cpu/cpu6/cpufreq/interactive/above_hispeed_delay
+    chmod 0660 /sys/devices/system/cpu/cpu6/cpufreq/interactive/above_hispeed_delay
+    chown system system /sys/devices/system/cpu/cpu6/cpufreq/interactive/boost
+    chmod 0660 /sys/devices/system/cpu/cpu6/cpufreq/interactive/boost
+    chown system system /sys/devices/system/cpu/cpu6/cpufreq/interactive/boostpulse
+    chown system system /sys/devices/system/cpu/cpu6/cpufreq/interactive/input_boost
+    chmod 0660 /sys/devices/system/cpu/cpu6/cpufreq/interactive/input_boost
+    chown system system /sys/devices/system/cpu/cpu6/cpufreq/interactive/boostpulse_duration
+    chmod 0660 /sys/devices/system/cpu/cpu6/cpufreq/interactive/boostpulse_duration
+    chown system system /sys/devices/system/cpu/cpu6/cpufreq/interactive/io_is_busy
+    chmod 0660 /sys/devices/system/cpu/cpu6/cpufreq/interactive/io_is_busy
+
+# Mount cpuset group for cameraserver
+    mkdir /dev/cpuset/cameraserver
+    copy /dev/cpuset/cpus /dev/cpuset/cameraserver/cpus
+    copy /dev/cpuset/mems /dev/cpuset/cameraserver/mems
+    chown system system /dev/cpuset/cameraserver
+    chown system system /dev/cpuset/cameraserver/tasks
+    chown system system /dev/cpuset/cameraserver/cpus
+    chmod 0664 /dev/cpuset/cameraserver/tasks
+    chmod 0664 /dev/cpuset/cameraserver/cpus
+
+# For CPUSET(7885)   0-3, 4-5, 6-7
+    chown system system /dev/cpuset/top-app/cpus
+    chown system system /dev/cpuset/foreground/cpus
+    chown system system /dev/cpuset/background/cpus
+    chown system system /dev/cpuset/system-background/cpus
+    chmod 664 /dev/cpuset/top-app/cpus
+    chmod 664 /dev/cpuset/foreground/cpus
+    chmod 664 /dev/cpuset/background/cpus
+    chmod 664 /dev/cpuset/system-background/cpus
+    write /dev/cpuset/top-app/cpus 0-7
+    write /dev/cpuset/foreground/cpus 0-7
+    write /dev/cpuset/background/cpus 0-1
+    write /dev/cpuset/system-background/cpus 0-3
+
+# For Selective boost
+    write /dev/cpuset/top-app/selective_boost 1
+    write /dev/cpuset/foreground/selective_boost 1
+    write /dev/cpuset/cameraserver/selective_boost 1
 
 #dbmd
     chmod 0660 /dev/dbmdx-1
@@ -503,10 +552,15 @@ on boot
     chown system system /dev/ttyGS3
 
 on fs
-    mount_all /fstab.samsungexynos7885
+    mount_all /fstab.exynos7885
     setprop ro.crypto.fuse_sdcard true
     chown radio system /efs
     restorecon_recursive /efs
+
+    #For cpefs partition
+    restorecon_recursive /cpefs
+    chown radio system /cpefs
+    chmod 0771 /cpefs
 
 # Permissions for ION
     chmod 0660 /sys/class/ion_cma/ion_video_ext/isolated
@@ -589,7 +643,7 @@ on fs
     chown system system /dev/network_throughput
 
 # ARGOSD
-    service argos-daemon /system/bin/argosd
+service argos-daemon /vendor/bin/argosd
     class main
     user system
     group system radio
@@ -606,13 +660,6 @@ on fs
 #    user system
 #    group system drmrpc
 #    seclabel u:r:tee:s0
-
-# Modem boot daemon
-#    service cpboot-daemon /sbin/cbd -d -tss310 -bm -mm -P mmcblk0p5
-#    class main
-#    user root
-#    group radio cache inet misc audio sdcard_rw log
-#    seclabel u:r:cbd:s0
 
 # DM daemon
 #    service DM-daemon /system/bin/dmd
@@ -706,47 +753,6 @@ service iprenew_bt-pan /system/bin/dhcpcd -n
         disabled
         oneshot
         
-on post-fs-data
-# WLBT MX
-    # for slsi WIFI file operation
-    chown system system /sys/module/scsc_wlan/parameters/EnableTestMode
-    chmod 0666 /sys/module/scsc_wlan/parameters/EnableTestMode
-    chown system system /sys/module/scsc_mx/parameters/firmware_variant
-    chmod 0666 /sys/module/scsc_mx/parameters/firmware_variant
-    chown system system /sys/module/scsc_mx/parameters/enable_auto_sense
-    chmod 0666 /sys/module/scsc_mx/parameters/enable_auto_sense
-    chown system system /sys/module/scsc_mx/parameters/use_new_fw_structure
-    chmod 0666 /sys/module/scsc_mx/parameters/use_new_fw_structure
-    chown system system /proc/driver/mx140_clk0/restart
-    chmod 0666 /proc/driver/mx140_clk0/restart
-    chown system system /sys/module/scsc_bt/parameters/disable_service
-    chmod 0666 /sys/module/scsc_bt/parameters/disable_service
-    chown system system /sys/module/scsc_bt/parameters/force_crash
-    chmod 0666 /sys/module/scsc_bt/parameters/force_crash
-
-    chown system system /dev/s5n2560udi0
-    chmod 0666 /dev/s5n2560udi0
-    chown system system /dev/mx_0_debug_sampler
-    chmod 0666 /dev/mx_0_debug_sampler
-    chown system system /dev/mx_0_m4_gdb
-    chmod 0666 /dev/mx_0_m4_gdb
-    chown system system /dev/mx_0_mmap
-    chmod 0666 /dev/mx_0_mmap
-    chown system system /dev/mx_0_r4_gdb
-    chmod 0666 /dev/mx_0_r4_gdb
-    chown system system /dev/mx_client_test_0
-    chmod 0666 /dev/mx_client_test_0
-
-    chown system system /system/bin/moredump
-    chmod 0755 /system/bin/moredump
-    chown system system /system/bin/moredump.bin
-    chmod 0755 /system/bin/moredump.bin
-    chown system system /system/bin/disable_auto_coredump
-    chmod 0755 /system/bin/disable_auto_coredump
-    chown system system /system/bin/trigger_moredump
-    chmod 0755 /system/bin/trigger_moredump
-    
-    write /sys/module/scsc_mx/parameters/disable_recovery_handling 0
 
 on boot
 
@@ -770,26 +776,11 @@ on property:sys.boot_completed=1
 on property:security.semdaemonfinish=1
     stop sem_daemon
 
-# scsc deaemon
-service wlbtd /vendor/bin/wlbtd
-    class main
-    user system
-    group wifi inet log sdcard_rw misc
-
-
 # umount service
 service umount_service /system/bin/umount -D /preload
     disabled
     seclabel u:r:umount_service:s0
     oneshot
-	
-# GPS
-service gpsd /vendor/bin/hw/gpsd -c /vendor/etc/gnss/gps.cfg
-    class main
-    user gps
-    group system inet net_raw wakelock
-    ioprio be 0
-    seclabel u:r:gpsd:s0	
 
 # SSWAP
 service swapon /sbin/sswap -s -f 2048

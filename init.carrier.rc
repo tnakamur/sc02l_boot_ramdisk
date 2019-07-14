@@ -4,8 +4,7 @@ on init
     mkdir /omr 0771 system system
 
 #carrier
-	export PHONEBOOK_EXCHANGE_PKG_DOCOMO "com.samsung.android.exchange"
-    setprop ro.phonemotion.parameter.path /system/etc/parameter.txt
+    export PHONEBOOK_EXCHANGE_PKG_DOCOMO "com.samsung.android.exchange"
 
 on fs
 #omr
@@ -14,11 +13,21 @@ on fs
     chown system system /omr
     chmod 0771 /omr
 
-on post-fs-data	
+on post-fs-data
+
+# FeliCaLock
+    mkdir /efs/sec_efs/FeliCaLock 0775 system vendor_felicalock
+    chmod 0775 /efs/sec_efs/FeliCaLock
+    chown system vendor_felicalock /efs/sec_efs/FeliCaLock
+    chown vendor_felicalock vendor_felicalock /efs/sec_efs/FeliCaLock/01
+    chown vendor_felicalock vendor_felicalock /efs/sec_efs/FeliCaLock/02
+    chown vendor_felicalock vendor_felicalock /efs/sec_efs/FeliCaLock/03
+
 # JPN: For MobileTV [ISDBT/SBTVD]
     mkdir /data/one-seg 0775 system system
     chown system system /data/one-seg
     chmod 0775 /data/one-seg
+
 
 # Fullseg data foldor of FSI
     mkdir /data/dtv 0770 system system
@@ -28,13 +37,6 @@ on post-fs-data
     mkdir /data/misc/multimedia 0770 system system
     mkdir /data/misc/multimedia/BML 0770 system system
 
-# FeliCaLock
-    mkdir /efs/sec_efs/FeliCaLock 0775 system oem_5504
-    chown system oem_5504 /efs/sec_efs/FeliCaLock
-	
-# For JPN dhome kisekae
-    mkdir /data/kisekae 0755 system system
-
 # GNSS SUPL IOT for JPN DCM
     setprop dcm_supl_iot true
 
@@ -43,13 +45,13 @@ on boot
 service broadcastProcessObserver_ltn /system/bin/broadcastProcessObserver_ltn
     class main
     user system
-    group system audio sdcard_rw shell media media_rw
+    group system audio camera graphics sdcard_rw sdcard_r media media_rw shell oem_5432 radio mediadrm
 
 # JPN: For FullSegDTV of FSI [ISDBT] should be in on boot
 service dtvserver /system/bin/dtvserver
     class main
     user system
-    group system audio sdcard_rw shell media media_rw
+    group system audio sdcard_rw shell media media_rw oem_5432
 
 on post-fs
 # Permissions for ISDBT/SBTVD tuner
