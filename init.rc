@@ -1444,6 +1444,8 @@ on boot
     chmod 444 /sys/class/sec/sdcard/sdcard_summary
     chown system system /sys/class/sec/sdinfo/sd_count
     chmod 444 /sys/class/sec/sdinfo/sd_count
+    chown system system /sys/class/sec/sdinfo/data
+    chmod 444 /sys/class/sec/sdinfo/data
 
     # h2k
     mkdir /efs/cpk 0771 radio system
